@@ -23,8 +23,10 @@ export interface PCMTrack {
 }
 
 // Sample video data with timestamps
+
+const videoId = localStorage.getItem("videoId") as string;
 export const videoData: VideoData = {
-  id: 'dQw4w9WgXcQ', // Rick Astley - Never Gonna Give You Up (sample)
+  id: videoId, // Rick Astley - Never Gonna Give You Up (sample)
   title: 'Educational Physics Lecture - Mechanics and Thermodynamics',
   artist: 'Dr. Physics Professor',
   duration: 300, // 5 minutes

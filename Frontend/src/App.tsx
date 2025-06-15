@@ -14,7 +14,7 @@ import { TheoryContent } from './components/Content/TheoryContent';
 // import { Layout } from 'lucide-react';
 import {Layout } from './components/Linear/Test/Layout'
 import { Pcm } from './components/PCM';
-import { Stem } from './components/STEM';
+// import { Stem } from './components/STEM';
 
 const App: React.FC = () => {
   return (
@@ -32,7 +32,7 @@ const App: React.FC = () => {
           <Route path="/rh" element={<MainResources />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/pcm" element={<Pcm />} />
-          <Route path="/stem" element={<Stem />} />
+          <Route path="/stem" element={<Layout />} />
           
           <Route path="/Test" element={<Layout />} />
         </Routes>
