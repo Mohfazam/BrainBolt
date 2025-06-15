@@ -1,5 +1,6 @@
-// src/components/YouTubePlayer.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Play, Pause, SkipForward, Clock, Volume2, Info, Target } from 'lucide-react';
 
 interface YouTubePlayerProps {
   timestamps: number[];
@@ -16,19 +17,16 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
   const playerRef = useRef<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get video ID from localStorage on mount
   useEffect(() => {
     const savedVideoId = localStorage.getItem('youtubeVideoId');
     if (savedVideoId) {
       setVideoId(savedVideoId);
     } else {
-      // Default video if none is set
-      setVideoId(savedVideoId!);
-    //   localStorage.setItem('youtubeVideoId', 'dQw4w9WgXcQ');
+      setVideoId('dQw4w9WgXcQ');
+      localStorage.setItem('youtubeVideoId', 'dQw4w9WgXcQ');
     }
   }, []);
 
-  // Initialize YouTube player
   useEffect(() => {
     if (!videoId) return;
 
@@ -49,9 +47,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
         }
       });
     };
-//@ts-ignore
+
+    // @ts-ignore
     if (!window.YT) {
-      // Load YouTube IFrame API if not already loaded
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
       
@@ -77,18 +75,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
   };
 
   const onPlayerStateChange = (event: any) => {
-    // Video ended
     if (event.data === 0) {
       setIsPlaying(false);
       if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    // Playing
-    else if (event.data === 1) {
+    } else if (event.data === 1) {
       setIsPlaying(true);
       startProgressTracking();
-    }
-    // Paused
-    else if (event.data === 2) {
+    } else if (event.data === 2) {
       setIsPlaying(false);
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
@@ -102,7 +95,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
         const time = playerRef.current.getCurrentTime();
         setCurrentTime(time);
         
-        // Check if we've reached the next timestamp
         if (nextTimestampIndex < timestamps.length && time >= timestamps[nextTimestampIndex]) {
           playerRef.current.pauseVideo();
           setPausedAtTimestamp(timestamps[nextTimestampIndex]);
@@ -119,7 +111,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
       playerRef.current.pauseVideo();
     } else {
       if (pausedAtTimestamp !== null) {
-        // Resume from where we paused at timestamp
         playerRef.current.seekTo(pausedAtTimestamp, true);
         setPausedAtTimestamp(null);
       }
@@ -134,7 +125,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
     if (playerRef.current) {
       playerRef.current.seekTo(newTime, true);
       
-      // Update next timestamp index based on new position
       let newIndex = 0;
       for (let i = 0; i < timestamps.length; i++) {
         if (newTime < timestamps[i]) {
@@ -164,157 +154,223 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ timestamps }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gradient-to-br from-gray-900 to-black rounded-2xl shadow-2xl">
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="flex-1">
-          <div className="bg-black rounded-xl overflow-hidden shadow-lg">
-            <div id="youtube-player" className="w-full aspect-video" />
-          </div>
-          
-          <div className="mt-6 bg-gray-800/50 backdrop-blur-sm rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-lg font-semibold text-white">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Main Player */}
+      <div className="lg:col-span-2">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative p-8 rounded-3xl bg-white/[0.02] backdrop-blur-sm border border-white/[0.05] overflow-hidden"
+        >
+          {/* Subtle hexagonal pattern overlay */}
+          <motion.div
+            animate={{
+              opacity: [0.03, 0.05, 0.03],
+            }}
+            transition={{
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute inset-0 opacity-[0.03]"
+          >
+            <svg
+              className="absolute inset-0 w-full h-full"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 60 60"
+            >
+              <defs>
+                <linearGradient id="hex-gradient-player" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: '#A78BFA', stopOpacity: 0.3 }} />
+                  <stop offset="50%" style={{ stopColor: '#3B82F6', stopOpacity: 0.3 }} />
+                  <stop offset="100%" style={{ stopColor: '#FFFFFF', stopOpacity: 0.3 }} />
+                </linearGradient>
+              </defs>
+              <polygon
+                points="30,5 50,17.5 50,42.5 30,55 10,42.5 10,17.5"
+                fill="none"
+                stroke="url(#hex-gradient-player)"
+                strokeWidth="0.4"
+              />
+            </svg>
+          </motion.div>
+
+          <div className="relative z-10">
+            <div className="bg-black rounded-2xl overflow-hidden shadow-2xl mb-6">
+              <div id="youtube-player" className="w-full aspect-video" />
+            </div>
+            
+            {/* Status Display */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-lg font-light text-white">
                 {pausedAtTimestamp !== null ? (
-                  <span className="text-yellow-400">Paused at {formatTime(pausedAtTimestamp)}</span>
+                  <span className="flex items-center gap-2 text-yellow-400">
+                    <Target className="w-4 h-4" />
+                    Paused at {formatTime(pausedAtTimestamp)}
+                  </span>
                 ) : isPlaying ? (
-                  <span className="text-green-400">Playing</span>
+                  <span className="flex items-center gap-2 text-green-400">
+                    <Play className="w-4 h-4" />
+                    Playing
+                  </span>
                 ) : (
-                  <span className="text-red-400">Paused</span>
+                  <span className="flex items-center gap-2 text-red-400">
+                    <Pause className="w-4 h-4" />
+                    Paused
+                  </span>
                 )}
               </div>
               
-              <div className="text-gray-300">
-                {formatTime(currentTime)} / {formatTime(duration)}
+              <div className="flex items-center gap-2 text-white/60">
+                <Clock className="w-4 h-4" />
+                <span className="font-light">{formatTime(currentTime)} / {formatTime(duration)}</span>
               </div>
             </div>
             
+            {/* Progress Bar */}
             <input
               type="range"
               min="0"
               max={duration}
               value={currentTime}
               onChange={handleSeek}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-600"
+              className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-white mb-6"
+              style={{
+                background: `linear-gradient(to right, white 0%, white ${(currentTime / duration) * 100}%, rgba(255,255,255,0.1) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.1) 100%)`
+              }}
             />
             
-            <div className="flex justify-center gap-4 mt-6">
-              <button
+            {/* Controls */}
+            <div className="flex justify-center gap-4">
+              <motion.button
                 onClick={togglePlayPause}
-                className={`p-4 rounded-full ${
-                  isPlaying 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                } transition-colors`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-4 bg-white text-black rounded-full shadow-2xl hover:shadow-white/20 transition-all duration-300"
               >
-                {isPlaying ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </button>
+                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+              </motion.button>
               
-              <button
+              <motion.button
                 onClick={skipToNextTimestamp}
                 disabled={nextTimestampIndex >= timestamps.length}
-                className={`p-4 rounded-full ${
-                  nextTimestampIndex >= timestamps.length
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } transition-colors`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-4 bg-white/10 text-white rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z" />
-                  <path d="M15 6a1 1 0 10-2 0v8a1 1 0 102 0V6z" />
-                </svg>
-              </button>
+                <SkipForward className="w-6 h-6" />
+              </motion.button>
             </div>
           </div>
-        </div>
-        
-        <div className="md:w-80 bg-gray-800/50 backdrop-blur-sm rounded-xl p-4">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-            </svg>
-            Pause Timestamps
-          </h3>
-          
-          <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-            {timestamps.map((ts, index) => (
-              <div 
-                key={index}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  index === nextTimestampIndex
-                    ? 'bg-yellow-500/20 border border-yellow-500'
-                    : index < nextTimestampIndex
-                    ? 'bg-green-500/10 border border-green-500/30'
-                    : 'bg-gray-700/50 hover:bg-gray-700'
-                }`}
-                onClick={() => {
-                  playerRef.current.seekTo(ts, true);
-                  setCurrentTime(ts);
-                  setNextTimestampIndex(index);
-                  setPausedAtTimestamp(ts);
-                  playerRef.current.pauseVideo();
-                }}
-              >
-                <div className="flex justify-between items-center">
-                  <span className={`font-medium ${
-                    index === nextTimestampIndex 
-                      ? 'text-yellow-300' 
-                      : index < nextTimestampIndex 
-                        ? 'text-green-300' 
-                        : 'text-gray-300'
-                  }`}>
-                    Timestamp {index + 1}
-                  </span>
-                  <span className="text-gray-400 font-mono">{formatTime(ts)}</span>
-                </div>
-                
-                {index === nextTimestampIndex && (
-                  <div className="mt-2 text-yellow-300 text-sm flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    Next pause point
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-6 p-3 bg-gray-900/50 rounded-lg">
-            <h4 className="text-gray-300 font-medium mb-2 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
-              </svg>
-              Controls Guide
-            </h4>
-            <ul className="text-sm text-gray-400 space-y-1">
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">▶️</span> Play/Pause video
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-400">⏭️</span> Skip to next timestamp
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-yellow-400">⏱️</span> Click timestamps to jump
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-gray-300">📊</span> Drag progress bar to seek
-              </li>
-            </ul>
-          </div>
-        </div>
+        </motion.div>
       </div>
       
-      <div className="mt-8 text-center text-gray-500 text-sm">
-        <p>Video ID: {videoId} (stored in localStorage)</p>
-        <p className="mt-2">To change the video, update the "youtubeVideoId" in localStorage</p>
+      {/* Timestamps Sidebar */}
+      <div className="lg:col-span-1">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="relative p-6 rounded-3xl bg-white/[0.02] backdrop-blur-sm border border-white/[0.05] overflow-hidden"
+        >
+          <div className="relative z-10">
+            <h3 className="text-xl font-light text-white mb-6 flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+              Pause Timestamps
+            </h3>
+            
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+              {timestamps.map((ts, index) => (
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                    index === nextTimestampIndex
+                      ? 'bg-gradient-to-r from-yellow-400/10 via-orange-400/10 to-red-400/10 border-2 border-yellow-400/30'
+                      : index < nextTimestampIndex
+                      ? 'bg-green-400/5 border border-green-400/20'
+                      : 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20'
+                  }`}
+                  onClick={() => {
+                    playerRef.current.seekTo(ts, true);
+                    setCurrentTime(ts);
+                    setNextTimestampIndex(index);
+                    setPausedAtTimestamp(ts);
+                    playerRef.current.pauseVideo();
+                  }}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className={`font-medium ${
+                      index === nextTimestampIndex 
+                        ? 'text-yellow-300' 
+                        : index < nextTimestampIndex 
+                          ? 'text-green-300' 
+                          : 'text-white/80'
+                    }`}>
+                      Timestamp {index + 1}
+                    </span>
+                    <span className="text-white/60 font-mono text-sm">{formatTime(ts)}</span>
+                  </div>
+                  
+                  {index === nextTimestampIndex && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-yellow-300 text-sm"
+                    >
+                      <Target className="w-3 h-3" />
+                      Next pause point
+                    </motion.div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+            
+            {/* Controls Guide */}
+            <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
+              <h4 className="text-white/80 font-medium mb-3 flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-400" />
+                Controls Guide
+              </h4>
+              <ul className="text-sm text-white/60 space-y-2 font-light">
+                <li className="flex items-center gap-2">
+                  <Play className="w-3 h-3 text-green-400" />
+                  Play/Pause video
+                </li>
+                <li className="flex items-center gap-2">
+                  <SkipForward className="w-3 h-3 text-blue-400" />
+                  Skip to next timestamp
+                </li>
+                <li className="flex items-center gap-2">
+                  <Target className="w-3 h-3 text-yellow-400" />
+                  Click timestamps to jump
+                </li>
+                <li className="flex items-center gap-2">
+                  <Volume2 className="w-3 h-3 text-gray-400" />
+                  Drag progress bar to seek
+                </li>
+              </ul>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Video Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-6 p-4 rounded-2xl bg-white/[0.02] backdrop-blur-sm border border-white/[0.05]"
+        >
+          <div className="text-center text-white/60 text-sm font-light">
+            <p className="mb-2">Video ID: <span className="font-mono text-white/80">{videoId}</span></p>
+            <p>Stored in localStorage</p>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

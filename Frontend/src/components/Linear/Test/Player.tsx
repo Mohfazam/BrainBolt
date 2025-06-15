@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VideoData, Timestamp } from '../Data/hardcodedData';
 import { TimestampModule } from '../Data/moduleAssignment';
-import { Play, Pause, Clock, BookOpen } from 'lucide-react';
+import { Play, Pause, Clock, BookOpen, Target, SkipForward, Volume2 } from 'lucide-react';
 
 interface PlayerProps {
   videoData: VideoData;
@@ -41,7 +41,6 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
 
     // @ts-ignore
     if (!window.YT) {
-      // Load YouTube IFrame API if not already loaded
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
       
@@ -67,18 +66,13 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
   };
 
   const onPlayerStateChange = (event: any) => {
-    // Video ended
     if (event.data === 0) {
       setIsPlaying(false);
       if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    // Playing
-    else if (event.data === 1) {
+    } else if (event.data === 1) {
       setIsPlaying(true);
       startProgressTracking();
-    }
-    // Paused
-    else if (event.data === 2) {
+    } else if (event.data === 2) {
       setIsPlaying(false);
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
@@ -92,7 +86,6 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
         const time = playerRef.current.getCurrentTime();
         setCurrentTime(time);
         
-        // Check if we've reached the next timestamp
         if (nextTimestampIndex < videoData.timestamps.length && time >= videoData.timestamps[nextTimestampIndex].time) {
           playerRef.current.pauseVideo();
           setPausedAtTimestamp(videoData.timestamps[nextTimestampIndex].time);
@@ -124,7 +117,6 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
     if (playerRef.current) {
       playerRef.current.seekTo(newTime, true);
       
-      // Update next timestamp index based on new position
       let newIndex = 0;
       for (let i = 0; i < videoData.timestamps.length; i++) {
         if (newTime < videoData.timestamps[i].time) {
@@ -144,7 +136,6 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
       setPausedAtTimestamp(time);
       playerRef.current.pauseVideo();
       
-      // Find the index of this timestamp
       const index = videoData.timestamps.findIndex((ts:any) => ts.time === time);
       if (index !== -1) {
         setNextTimestampIndex(index + 1);
@@ -163,84 +154,136 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-8">
       {/* Video Player */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl"
+        className="relative p-8 rounded-3xl bg-white/[0.02] backdrop-blur-sm border border-white/[0.05] overflow-hidden"
       >
-        <div className="p-4">
-          <div className="bg-black rounded-xl overflow-hidden shadow-lg">
+        {/* Subtle hexagonal pattern overlay */}
+        <motion.div
+          animate={{
+            opacity: [0.03, 0.05, 0.03],
+          }}
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute inset-0 opacity-[0.03]"
+        >
+          <svg
+            className="absolute inset-0 w-full h-full"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 60 60"
+          >
+            <defs>
+              <linearGradient id="hex-gradient-player" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{ stopColor: '#A78BFA', stopOpacity: 0.3 }} />
+                <stop offset="50%" style={{ stopColor: '#3B82F6', stopOpacity: 0.3 }} />
+                <stop offset="100%" style={{ stopColor: '#FFFFFF', stopOpacity: 0.3 }} />
+              </linearGradient>
+            </defs>
+            <polygon
+              points="30,5 50,17.5 50,42.5 30,55 10,42.5 10,17.5"
+              fill="none"
+              stroke="url(#hex-gradient-player)"
+              strokeWidth="0.4"
+            />
+          </svg>
+        </motion.div>
+
+        <div className="relative z-10">
+          <div className="bg-black rounded-2xl overflow-hidden shadow-2xl mb-6">
             <div id="youtube-player" className="w-full aspect-video" />
           </div>
-        </div>
-        
-        {/* Player Controls */}
-        <div className="p-4 bg-gray-900/50">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+          
+          {/* Video Info */}
+          <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
             <div className="flex-1">
-              <h2 className="text-xl font-bold truncate">{videoData.title}</h2>
-              <p className="text-gray-400">{videoData.artist}</p>
+              <h2 className="text-2xl font-light text-white mb-2">{videoData.title}</h2>
+              <p className="text-white/60 font-light">{videoData.artist}</p>
             </div>
             
-            <div className="flex items-center gap-4">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={togglePlayPause}
-                className={`p-3 rounded-full ${
-                  isPlaying 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                } transition-colors shadow-lg`}
-              >
-                {isPlaying ? <Pause className="h-6 w-6 text-white" /> : <Play className="h-6 w-6 text-white" />}
-              </motion.button>
-              
-              <div className="flex items-center gap-2 text-gray-300">
-                <Clock size={16} />
-                <span>{formatTime(currentTime)}</span>
-                <span>/</span>
-                <span>{formatTime(videoData.duration)}</span>
+            <div className="flex items-center gap-4 text-white/60">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="font-light">{formatTime(currentTime)} / {formatTime(videoData.duration)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-4 h-4" />
+                <span className="text-sm font-light">HD</span>
               </div>
             </div>
           </div>
-          
-          <input
-            type="range"
-            min="0"
-            max={videoData.duration}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-600"
-          />
-          
+
+          {/* Player Controls */}
+          <div className="space-y-4">
+            <input
+              type="range"
+              min="0"
+              max={videoData.duration}
+              value={currentTime}
+              onChange={handleSeek}
+              className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
+              style={{
+                background: `linear-gradient(to right, white 0%, white ${(currentTime / videoData.duration) * 100}%, rgba(255,255,255,0.1) ${(currentTime / videoData.duration) * 100}%, rgba(255,255,255,0.1) 100%)`
+              }}
+            />
+            
+            <div className="flex items-center justify-center gap-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={togglePlayPause}
+                className="p-4 bg-white text-black rounded-full shadow-2xl hover:shadow-white/20 transition-all duration-300"
+              >
+                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (nextTimestampIndex < videoData.timestamps.length) {
+                    jumpToTimestamp(videoData.timestamps[nextTimestampIndex].time);
+                  }
+                }}
+                disabled={nextTimestampIndex >= videoData.timestamps.length}
+                className="p-3 bg-white/10 text-white rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <SkipForward className="w-5 h-5" />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Pause Notification */}
           <AnimatePresence>
             {pausedAtTimestamp !== null && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-4 p-4 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-700 rounded-lg"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-blue-400/10 via-purple-400/10 to-pink-400/10 border border-white/20 backdrop-blur-sm"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-600 rounded-full">
-                      <BookOpen size={16} className="text-white" />
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full">
+                      <BookOpen className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-yellow-300 font-medium">Learning Module Activated!</p>
-                      <p className="text-yellow-200 text-sm">Paused at {formatTime(pausedAtTimestamp)}</p>
+                      <p className="text-white font-medium">Learning Module Activated!</p>
+                      <p className="text-white/60 text-sm font-light">Paused at {formatTime(pausedAtTimestamp)}</p>
                     </div>
                   </div>
                   <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={togglePlayPause}
-                    className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium"
+                    className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-full font-medium hover:shadow-lg transition-all duration-300"
                   >
-                    <Play size={16} />
+                    <Play className="w-4 h-4" />
                     Continue
                   </motion.button>
                 </div>
@@ -255,53 +298,75 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-8 bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl"
+        className="relative p-8 rounded-3xl bg-white/[0.02] backdrop-blur-sm border border-white/[0.05] overflow-hidden"
       >
-        <div className="p-4 bg-gray-900 border-b border-gray-700">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Clock className="h-5 w-5 text-purple-400" />
-            Learning Timestamps & Modules
-          </h2>
-          <p className="text-gray-400 text-sm mt-1">Each timestamp triggers a different educational module</p>
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-lg">
+              <Target className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-2xl font-light text-white">Learning Timestamps</h2>
+          </div>
+          <p className="text-white/60 font-light">Each timestamp triggers a different educational module</p>
         </div>
         
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Timestamps Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {videoData.timestamps.map((ts:any, index:any) => {
             const module = getModuleForTimestamp(ts.time);
             
             return (
               <motion.div 
                 key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                className={`p-4 rounded-lg cursor-pointer transition-all ${
+                className={`group relative p-6 rounded-2xl cursor-pointer transition-all duration-300 overflow-hidden ${
                   index === nextTimestampIndex
-                    ? 'bg-purple-900/50 border-2 border-purple-500 shadow-lg'
+                    ? 'bg-gradient-to-r from-blue-400/10 via-purple-400/10 to-pink-400/10 border-2 border-white/20'
                     : index < nextTimestampIndex
-                      ? 'bg-green-900/20 border border-green-700/50'
-                      : 'bg-gray-700/50 hover:bg-gray-700 border border-gray-600/50'
+                      ? 'bg-green-400/5 border border-green-400/20'
+                      : 'bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] hover:border-white/10'
                 }`}
                 onClick={() => jumpToTimestamp(ts.time)}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h3 className={`font-bold ${
-                      index === nextTimestampIndex 
-                        ? 'text-purple-300' 
-                        : index < nextTimestampIndex 
-                          ? 'text-green-300' 
-                          : 'text-gray-300'
-                    }`}>
-                      {ts.title}
-                    </h3>
-                    <p className="text-gray-400 text-sm">{formatTime(ts.time)}</p>
-                  </div>
-                  <div className="text-right">
-                    {index === nextTimestampIndex ? (
-                      <span className="bg-purple-700 text-purple-200 px-2 py-1 rounded-full text-xs">Next</span>
-                    ) : index < nextTimestampIndex ? (
-                      <span className="bg-green-700/50 text-green-300 px-2 py-1 rounded-full text-xs">Completed</span>
-                    ) : null}
+                {/* Status indicator */}
+                <div className="absolute top-4 right-4">
+                  {index === nextTimestampIndex ? (
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"
+                    />
+                  ) : index < nextTimestampIndex ? (
+                    <div className="w-3 h-3 bg-green-400 rounded-full" />
+                  ) : (
+                    <div className="w-3 h-3 bg-white/20 rounded-full" />
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <h3 className={`font-medium mb-2 ${
+                    index === nextTimestampIndex 
+                      ? 'text-white' 
+                      : index < nextTimestampIndex 
+                        ? 'text-green-300' 
+                        : 'text-white/80'
+                  }`}>
+                    {ts.title}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm text-white/60">
+                    <Clock className="w-4 h-4" />
+                    <span className="font-light">{formatTime(ts.time)}</span>
+                    {index === nextTimestampIndex && (
+                      <span className="px-2 py-1 bg-white/10 rounded-full text-xs">Next</span>
+                    )}
+                    {index < nextTimestampIndex && (
+                      <span className="px-2 py-1 bg-green-400/20 text-green-300 rounded-full text-xs">Completed</span>
+                    )}
                   </div>
                 </div>
                 
@@ -309,16 +374,16 @@ const Player: React.FC<PlayerProps> = ({ videoData, onTimestampReached, timestam
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="mt-3 p-3 bg-gray-800/50 rounded-lg border border-gray-600/30"
+                    className="p-4 bg-white/5 rounded-xl border border-white/10"
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">{module.icon}</span>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">{module.icon}</span>
                       <div>
                         <p className="text-white font-medium text-sm">{module.title}</p>
-                        <p className="text-gray-400 text-xs">{module.type}</p>
+                        <p className="text-white/60 text-xs font-light">{module.type}</p>
                       </div>
                     </div>
-                    <p className="text-gray-300 text-xs line-clamp-2">{module.description}</p>
+                    <p className="text-white/70 text-xs font-light line-clamp-2">{module.description}</p>
                   </motion.div>
                 )}
               </motion.div>
