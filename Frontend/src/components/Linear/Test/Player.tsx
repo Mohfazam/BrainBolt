@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VideoData, Timestamp } from '../Data/hardcodedData';
 import { TimestampModule } from '../Data/moduleAssignment';
-import { Play, Pause, Clock, BookOpen, Target, SkipForward, Volume2 } from 'lucide-react';
+import { Play, Pause, Clock, BookOpen, Target,  SkipForward, Volume2 } from 'lucide-react';
 
 interface PlayerProps {
   videoData: VideoData;
